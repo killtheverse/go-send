@@ -10,9 +10,15 @@ import (
 )
 
 //GoSend - this function is exported to the main module
-func GoSend(fileName string, listenAddr string) {
+func GoSend(fileName string) {
 	
 	fmt.Println("File name is:", fileName)
+	listenAddr, err := ExternalIP()
+	if err != nil {
+		panic(err)
+	}
+	// fmt.Println("address is:", listenAddr)
+	listenAddr = listenAddr + ":9000"
 	registerSend(fileName, listenAddr)
 	l, err := net.Listen("tcp", listenAddr)
 	if err != nil {

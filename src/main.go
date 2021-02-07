@@ -20,11 +20,6 @@ func main() {
 			Usage: "File name to be shared",
 		},
 		&cli.StringFlag{
-			Name: "listen",
-			Value: "127.0.0.1:9000",
-			Usage: "Address and Port to listen on",
-		},
-		&cli.StringFlag{
 			Name: "server",
 			Value: "127.0.0.1:8000",
 			Usage: "Address of server",
@@ -36,7 +31,7 @@ func main() {
 			Name: "send",
 			Usage: "sends a file",
 			Action: func(c *cli.Context) error {
-				util.GoSend(c.String("file"), c.String("listen"))
+				util.GoSend(c.String("file"))
 				return nil
 			},
 		},	
@@ -44,7 +39,7 @@ func main() {
 			Name: "recieve",
 			Usage: "recieves the file",
 			Action: func(c *cli.Context) error {
-				util.GoRecv(c.String("file"), c.String("listen"))
+				util.GoRecv(c.String("file"))
 				return nil
 			},
 		},

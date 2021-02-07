@@ -6,13 +6,19 @@ import (
 	"net"
 	"strings"
 	"io/ioutil"
+	"errors"
 )
 
 
 //GoRecv - this function is exported to the main module
-func GoRecv(fileName string, listenAddr string) {
+func GoRecv(fileName string) {
 	
 	fmt.Println("File name is:", fileName)
+	listenAddr, err := ExternalIP()
+	if err != nil {
+		panic(err)
+	}
+	listenAddr = listenAddr + ":9000"
 	registerRecv(fileName, listenAddr)
 	l, err := net.Listen("tcp", listenAddr)
 	if err != nil {
@@ -79,4 +85,42 @@ func handleConnectionRecv(conn net.Conn) {
 		fmt.Println("File recieved")
 	}
 	conn.Close()
+}
+
+// ExternalIP is exported for use in goSend.go
+func ExternalIP() (string, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+	for _, iface := range ifaces {
+		if iface.Flags&net.FlagUp == 0 {
+			continue // interface down
+		}
+		if iface.Flags&net.FlagLoopback != 0 {
+			continue // loopback interface
+		}
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return "", err
+		}
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+			if ip == nil || ip.IsLoopback() {
+				continue
+			}
+			ip = ip.To4()
+			if ip == nil {
+				continue // not an ipv4 address
+			}
+			return ip.String(), nil
+		}
+	}
+	return "", errors.New("are you connected to the network?")
 }
