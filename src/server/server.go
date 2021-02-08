@@ -1,27 +1,28 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net"
 	"strings"
+	"github.com/killtheverse/go-send/src/util"
 )	
 
 type m map[string]string
 var fileAddress = m{}
 
-var (
-	listenAddr = flag.String("listen", "127.0.0.1:8000", "Listening address for server")
-)
-
 func main() {
-	flag.Parse()
-	l, err := net.Listen("tcp", *listenAddr)
+	listenAddr, err := util.ExternalIP()
+	if err != nil {
+		panic(err)
+	}
+	// fmt.Println("address is:", listenAddr)
+	listenAddr = listenAddr + ":8000"
+	l, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	fmt.Println("Listening on", *listenAddr)
+	fmt.Println("Listening on", listenAddr)
 
 	for {
 		conn, err := l.Accept()

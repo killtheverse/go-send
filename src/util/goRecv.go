@@ -11,7 +11,7 @@ import (
 
 
 //GoRecv - this function is exported to the main module
-func GoRecv(fileName string) {
+func GoRecv(fileName string, serverAddr string) {
 	
 	fmt.Println("File name is:", fileName)
 	listenAddr, err := ExternalIP()
@@ -19,12 +19,16 @@ func GoRecv(fileName string) {
 		panic(err)
 	}
 	listenAddr = listenAddr + ":9000"
-	registerRecv(fileName, listenAddr)
+	
 	l, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		panic(err)
+		listenAddr = strings.Split(listenAddr, ":")[0]
+		listenAddr = listenAddr + ":10000"
+		l, _ = net.Listen("tcp", listenAddr)
 	}
+
 	fmt.Println("Listening on:", listenAddr)
+	registerRecv(fileName, listenAddr, serverAddr)
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -35,8 +39,9 @@ func GoRecv(fileName string) {
 	
 }
 
-func registerRecv(fileName string, listenAddr string) {
-	conn, err := net.Dial("tcp", "127.0.0.1:8000")
+func registerRecv(fileName string, listenAddr string, serverAddr string) {
+	fmt.Println("Dialing:", serverAddr)
+	conn, err := net.Dial("tcp", serverAddr)
 	if err!= nil {
 		fmt.Println(err)
 	}
@@ -70,6 +75,7 @@ func handleConnectionRecv(conn net.Conn) {
 				panic(err)
 			}
 			data := string(buffer[:bytesRead])
+			fmt.Println("data:", data)
 			if data == "EXIT" {
 				break
 

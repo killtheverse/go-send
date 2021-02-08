@@ -31,7 +31,7 @@ func main() {
 			Name: "send",
 			Usage: "sends a file",
 			Action: func(c *cli.Context) error {
-				util.GoSend(c.String("file"))
+				util.GoSend(c.String("file"), c.String("server"))
 				return nil
 			},
 		},	
@@ -39,7 +39,7 @@ func main() {
 			Name: "recieve",
 			Usage: "recieves the file",
 			Action: func(c *cli.Context) error {
-				util.GoRecv(c.String("file"))
+				util.GoRecv(c.String("file"), c.String("server"))
 				return nil
 			},
 		},

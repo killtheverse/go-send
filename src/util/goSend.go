@@ -10,7 +10,7 @@ import (
 )
 
 //GoSend - this function is exported to the main module
-func GoSend(fileName string) {
+func GoSend(fileName string, serverAddr string) {
 	
 	fmt.Println("File name is:", fileName)
 	listenAddr, err := ExternalIP()
@@ -19,12 +19,15 @@ func GoSend(fileName string) {
 	}
 	// fmt.Println("address is:", listenAddr)
 	listenAddr = listenAddr + ":9000"
-	registerSend(fileName, listenAddr)
+	
 	l, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		panic(err)
+		listenAddr = strings.Split(listenAddr, ":")[0]
+		listenAddr = listenAddr + ":11000"
+		l, _ = net.Listen("tcp", listenAddr)
 	}
 	fmt.Println("Listening on:", listenAddr)
+	registerSend(fileName, listenAddr, serverAddr)
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -35,8 +38,9 @@ func GoSend(fileName string) {
 	
 }
 
-func registerSend(fileName string, listenAddr string) {
-	conn, err := net.Dial("tcp", "127.0.0.1:8000")
+func registerSend(fileName string, listenAddr string, serverAddr string) {
+	fmt.Println("Dialing:", serverAddr)
+	conn, err := net.Dial("tcp", serverAddr)
 	if err!= nil {
 		fmt.Println(err)
 	}
@@ -104,7 +108,6 @@ func readFile(fileName string, conn net.Conn) {
 			break
 		}
 		fmt.Println("SENDING:", string(buf))
-
 		conn.Write(buf)
 	}
 }
