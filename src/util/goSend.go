@@ -95,8 +95,7 @@ func readFile(fileName string, conn net.Conn) {
 		buf := make([]byte,4*1024) 
 		n, err := r.Read(buf) 
 		buf = buf[:n]
-		// fmt.Println("buf:", string(buf))
-		// fmt.Println(n)
+		
 		if n == 0 {
 			if err != nil {
 				fmt.Println(err)
