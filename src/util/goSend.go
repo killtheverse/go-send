@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 	"io"
+	
 )
 
 //GoSend - this function is exported to the main module
@@ -77,9 +78,18 @@ func sendFile(fileName string, peerAddr string) {
 	name := strings.Split(fileName, ".")[0]
 	ext := strings.Split(fileName, ".")[1]
 	conn.Write([]byte("SENDING,"+name+","+ext))
-	readFile(fileName, conn)
-	fmt.Println("File sent")
-	conn.Write([]byte("EXIT"))
+
+	buffer := make([]byte, 1024)
+	bytesRead, err := conn.Read(buffer)
+	reply := string(buffer[0:bytesRead])
+	if reply == "OK" {
+		readFile(fileName, conn)
+		fmt.Println("File sent")
+		conn.Write([]byte("EXIT"))
+	} else {
+		fmt.Println("Can't establish connection")
+	}
+	
 }
 
 func readFile(fileName string, conn net.Conn) {
@@ -107,6 +117,7 @@ func readFile(fileName string, conn net.Conn) {
 			break
 		}
 		fmt.Println("SENDING:", string(buf))
+		fmt.Println("=====================")
 		conn.Write(buf)
 	}
 }

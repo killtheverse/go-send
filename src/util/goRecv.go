@@ -68,7 +68,8 @@ func handleConnectionRecv(conn net.Conn) {
 		ext := strings.Split(string(buffer[0:bytesRead]), ",")[2]
 		name = name+"(copy)"
 		fileName := name + "." + ext
-		
+		fmt.Println("Filename:", fileName)
+		conn.Write([]byte("OK"))
 		for {
 			bytesRead, err := conn.Read(buffer)
 			if err != nil {
