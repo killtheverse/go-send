@@ -24,6 +24,11 @@ func main() {
 			Value: "127.0.0.1:8000",
 			Usage: "Address of server",
 		},
+		&cli.StringFlag{
+			Name: "port",
+			Value: ":9000",
+			Usage: "Port no.",
+		},
 	}
 
 	app.Commands = []*cli.Command {
@@ -31,7 +36,7 @@ func main() {
 			Name: "send",
 			Usage: "sends a file",
 			Action: func(c *cli.Context) error {
-				util.GoSend(c.String("file"), c.String("server"))
+				util.GoSend(c.String("file"), c.String("server"), c.String("port"))
 				return nil
 			},
 		},	
@@ -39,7 +44,7 @@ func main() {
 			Name: "recieve",
 			Usage: "recieves the file",
 			Action: func(c *cli.Context) error {
-				util.GoRecv(c.String("file"), c.String("server"))
+				util.GoRecv(c.String("file"), c.String("server"), c.String("port"))
 				return nil
 			},
 		},
