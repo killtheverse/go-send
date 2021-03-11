@@ -30,7 +30,7 @@ func registerSend(fileName string, listenAddrstring string, serverAddrstring str
 	}
 
 	go func() {
-		sendString := "REGISTER," + fileName + "," + listenAddrstring
+		sendString := "REGISTER," + fileName
 		bytesWritten, err := conn.WriteTo([]byte(sendString), serverAddr)
 		if err != nil {
 			panic(err)
@@ -53,31 +53,48 @@ func handleConnectionSend(conn *net.UDPConn, listenAddr string) {
 		}
 		reply := strings.Split(string(buffer[0:bytesRead]), ",")[0]
 		fmt.Println("Buffer:", string(buffer[0:bytesRead]))
+		fmt.Println("Reply:", reply)
 		if reply == "SUCCESS" {
 			fmt.Println("File is ready for sharing")
 		} else if reply == "REQUEST" {
 			peerAddr := strings.Split(string(buffer[0:bytesRead]), ",")[1]
 			fileName := strings.Split(string(buffer[0:bytesRead]), ",")[2]
 			fmt.Println("File requested from:", peerAddr)
-			sendFile(fileName, listenAddr, peerAddr, conn)	
-		}
+			// sendFile(fileName, peerAddr, conn)	
+			holePunchSend(fileName, peerAddr, conn)
+		} 
 	}	
 }
 
-func sendFile(fileName string, listenAddrstring string, peerAddrstring string, conn *net.UDPConn) {
+func holePunchSend(fileName string, peerAddrString string, conn *net.UDPConn) {
+	peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)
+	for i:=0;i<1;i++ {
+		conn.WriteTo([]byte("HOLEPUNCH"), peerAddr)
+	}	
+	sendFile(fileName, peerAddrString, conn)
+}
+
+func sendFile(fileName string, peerAddrstring string, conn *net.UDPConn) {
 	
 	peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrstring)
 	name := strings.Split(fileName, ".")[0]
 	ext := strings.Split(fileName, ".")[1]
-	conn.WriteTo([]byte("SENDING,"+name+","+ext), peerAddr)
 
 	buffer := make([]byte, 1024)
-	bytesRead, err := conn.Read(buffer)
-	if err != nil {
-		panic(err)
+	reply := ""
+	for {
+		conn.WriteTo([]byte("SENDING,"+name+","+ext), peerAddr)
+		bytesRead, err := conn.Read(buffer)
+		if err != nil {
+			panic(err)
+		}
+		reply = string(buffer[0:bytesRead])
+		fmt.Println("Reply:", reply)
+		if reply == "OK" {
+			break
+		}
 	}
-	reply := string(buffer[0:bytesRead])
-	fmt.Println("Reply:", reply)
+	
 	if reply == "OK" {
 		readFile(fileName, conn, peerAddrstring)
 		fmt.Println("File sent")
@@ -86,6 +103,7 @@ func sendFile(fileName string, listenAddrstring string, peerAddrstring string, c
 		fmt.Println("Can't establish connection")
 	}	
 }
+
 
 func readFile(fileName string, conn *net.UDPConn, peerAddrString string) {
 	peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)

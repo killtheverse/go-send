@@ -32,7 +32,7 @@ func registerRecv(fileName string, listenAddrString string, serverAddrString str
 	}
 	
 	go func() {
-		sendString := "CHECK," + fileName + "," + listenAddrString
+		sendString := "CHECK," + fileName 
 		bytesWritten, err := conn.WriteTo([]byte(sendString), serverAddr)
 		if err != nil {
 			panic(err)
@@ -41,10 +41,10 @@ func registerRecv(fileName string, listenAddrString string, serverAddrString str
 		fmt.Println(bytesWritten, "bytes sent")
 	} ()
 	
-	handleConnectionRecv(conn, listenAddrString)
+	handleConnectionRecv(conn)
 }
 
-func handleConnectionRecv(conn *net.UDPConn, listenAddrString string) {
+func handleConnectionRecv(conn *net.UDPConn) {
 	peerAddrString := ""
 	for {
 		fmt.Println("Listening")
@@ -59,6 +59,10 @@ func handleConnectionRecv(conn *net.UDPConn, listenAddrString string) {
 			fmt.Println("Requested file not found")
 		} else if reply == "SUCCESS" {
 			peerAddrString = strings.Split(string(buffer[0:bytesRead]), ",")[1]
+			peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)
+			for i:=0;i<1;i++ {
+				conn.WriteTo([]byte("HOLEPUNCH"), peerAddr)
+			}	
 			fmt.Println("File found on address:", peerAddrString)
 		} else if reply == "SENDING" {
 			name := strings.Split(string(buffer[0:bytesRead]), ",")[1]

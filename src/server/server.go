@@ -8,7 +8,7 @@ import (
 )	
 
 type m map[string]string
-var fileAddress = m{}
+var peerAddress = m{}
 
 func main() {
 	listenAddrString, err := util.ExternalIP()
@@ -31,38 +31,38 @@ func main() {
 
 func handleConnection(conn *net.UDPConn) {
 	buffer := make([]byte, 1024)
-	bytesRead, err := conn.Read(buffer)
+	bytesRead, peerAddr, err := conn.ReadFromUDP(buffer)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println("Buffer:", string(buffer[0:bytesRead]))
 	message := strings.Split(string(buffer[0:bytesRead]), ",")[0]
 	fileName := strings.Split(string(buffer[0:bytesRead]), ",")[1]
-	peerAddrString := strings.Split(string(buffer[0:bytesRead]), ",")[2] 
-	peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)
+
 	fmt.Println("Message:", message)
 	fmt.Println("Filename:", fileName)
-	fmt.Println("peerAddrString:", peerAddrString)
+	fmt.Println("peerAddr:", peerAddr.String())
+
 	if message == "REGISTER" {
-		fileAddress[fileName] = peerAddrString
-		fmt.Println("Sending", "SUCCESS", "to", peerAddrString)
+		peerAddress[fileName] = peerAddr.String()
+		fmt.Println("Sending", "SUCCESS", "to local:", peerAddr.String())
 		conn.WriteTo([]byte("SUCCESS"), peerAddr)
 	} else if message == "CHECK" {
-		addr, ok := fileAddress[fileName]
+		senderAddr, ok := peerAddress[fileName]
 		var sendString string
 		if ok == true {
-			sendString = "SUCCESS," + addr 	
+			sendString = "SUCCESS," + senderAddr  	
 		} else {
 			sendString = "NOTFOUND"
 		}
 		
-		fmt.Println("Sending", sendString, "to", peerAddrString)
+		fmt.Println("Sending", sendString, "to", peerAddr)
 		conn.WriteTo([]byte(sendString), peerAddr)
 
 		if ok == true {
-			peerAddr2,_ := net.ResolveUDPAddr("udp", addr) 
-			sendString = "REQUEST," + peerAddrString + "," + fileName
-			conn.WriteTo([]byte(sendString), peerAddr2)
+			publicAddr2,_ := net.ResolveUDPAddr("udp", senderAddr) 
+			sendString = "REQUEST," + peerAddr.String() + "," + fileName
+			conn.WriteTo([]byte(sendString), publicAddr2)
 		}
 	}
 }
