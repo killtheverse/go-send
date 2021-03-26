@@ -47,6 +47,8 @@ func handleConnection(conn *net.UDPConn) {
 		peerAddress[fileName] = peerAddr.String()
 		fmt.Println("Sending", "SUCCESS", "to local:", peerAddr.String())
 		conn.WriteTo([]byte("SUCCESS"), peerAddr)
+	} else if message == "KEEPALIVE" {
+		return
 	} else if message == "CHECK" {
 		senderAddr, ok := peerAddress[fileName]
 		var sendString string

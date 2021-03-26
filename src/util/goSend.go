@@ -3,10 +3,11 @@ package util
 import (
 	"bufio"
 	"fmt"
-	"os"
-	"net"
-	"strings"
 	"io"
+	"net"
+	"os"
+	"strings"
+	"time"
 )
 
 //GoSend - this function is exported to the main module
@@ -39,7 +40,15 @@ func registerSend(fileName string, listenAddrstring string, serverAddrstring str
 		fmt.Println(bytesWritten, "bytes sent")
 	} ()
 
+	// go keepAlive(conn, serverAddrstring)
+
 	handleConnectionSend(conn, listenAddrstring)
+}
+
+func keepAlive(conn *net.UDPConn, serverAddrstring string) {
+	serverAddr, _ := net.ResolveUDPAddr("udp", serverAddrstring)
+	conn.WriteTo([]byte("KEEPALIVE"), serverAddr)
+	time.Sleep(10*time.Second)
 }
 
 func handleConnectionSend(conn *net.UDPConn, listenAddr string) {
@@ -69,13 +78,13 @@ func handleConnectionSend(conn *net.UDPConn, listenAddr string) {
 func holePunchSend(fileName string, peerAddrString string, conn *net.UDPConn) {
 	peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)
 	for i:=0;i<1;i++ {
+		fmt.Println("Sending: HOLEPUNCH")
 		conn.WriteTo([]byte("HOLEPUNCH"), peerAddr)
 	}	
 	sendFile(fileName, peerAddrString, conn)
 }
 
 func sendFile(fileName string, peerAddrstring string, conn *net.UDPConn) {
-	
 	peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrstring)
 	name := strings.Split(fileName, ".")[0]
 	ext := strings.Split(fileName, ".")[1]
