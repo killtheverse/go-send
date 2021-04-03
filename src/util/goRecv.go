@@ -2,7 +2,7 @@ package util
 
 import (
 	"fmt"
-	// "os"
+	"os"
 	"net"
 	"strings"
 	"io/ioutil"
@@ -92,6 +92,7 @@ func handleConnectionRecv(conn *net.UDPConn) {
 			}
 
 			fmt.Println("File recieved")
+			os.Exit(0)
 		}
 	}
 }

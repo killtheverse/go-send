@@ -40,7 +40,7 @@ func registerSend(fileName string, listenAddrstring string, serverAddrstring str
 		fmt.Println(bytesWritten, "bytes sent")
 	} ()
 
-	// go keepAlive(conn, serverAddrstring)
+	go keepAlive(conn, serverAddrstring)
 
 	handleConnectionSend(conn, listenAddrstring)
 }
@@ -108,6 +108,7 @@ func sendFile(fileName string, peerAddrstring string, conn *net.UDPConn) {
 		readFile(fileName, conn, peerAddrstring)
 		fmt.Println("File sent")
 		conn.WriteTo([]byte("EXIT"), peerAddr)
+		os.Exit(0)
 	} else {
 		fmt.Println("Can't establish connection")
 	}	

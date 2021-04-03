@@ -24,47 +24,48 @@ func main() {
 
 	fmt.Println("Listening on", listenAddrString)
 
-	for {
-		handleConnection(conn)
-	}
+	handleConnection(conn)
 }
 
 func handleConnection(conn *net.UDPConn) {
 	buffer := make([]byte, 1024)
-	bytesRead, peerAddr, err := conn.ReadFromUDP(buffer)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Buffer:", string(buffer[0:bytesRead]))
-	message := strings.Split(string(buffer[0:bytesRead]), ",")[0]
-	fileName := strings.Split(string(buffer[0:bytesRead]), ",")[1]
-
-	fmt.Println("Message:", message)
-	fmt.Println("Filename:", fileName)
-	fmt.Println("peerAddr:", peerAddr.String())
-
-	if message == "REGISTER" {
-		peerAddress[fileName] = peerAddr.String()
-		fmt.Println("Sending", "SUCCESS", "to local:", peerAddr.String())
-		conn.WriteTo([]byte("SUCCESS"), peerAddr)
-	} else if message == "KEEPALIVE" {
-		return
-	} else if message == "CHECK" {
-		senderAddr, ok := peerAddress[fileName]
-		var sendString string
-		if ok == true {
-			sendString = "SUCCESS," + senderAddr  	
-		} else {
-			sendString = "NOTFOUND"
+	for {
+		bytesRead, peerAddr, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			panic(err)
 		}
-		
-		fmt.Println("Sending", sendString, "to", peerAddr)
-		conn.WriteTo([]byte(sendString), peerAddr)
-
-		if ok == true {
-			publicAddr2,_ := net.ResolveUDPAddr("udp", senderAddr) 
-			sendString = "REQUEST," + peerAddr.String() + "," + fileName
-			conn.WriteTo([]byte(sendString), publicAddr2)
+		fmt.Println("Buffer:", string(buffer[0:bytesRead]))
+		if string(buffer[0:bytesRead]) == "KEEPALIVE" {
+			continue
 		}
-	}
+		message := strings.Split(string(buffer[0:bytesRead]), ",")[0]
+		fileName := strings.Split(string(buffer[0:bytesRead]), ",")[1]
+
+		fmt.Println("Message:", message)
+		fmt.Println("Filename:", fileName)
+		fmt.Println("peerAddr:", peerAddr.String())
+
+		if message == "REGISTER" {
+			peerAddress[fileName] = peerAddr.String()
+			fmt.Println("Sending", "SUCCESS", "to local:", peerAddr.String())
+			conn.WriteTo([]byte("SUCCESS"), peerAddr)
+		} else if message == "CHECK" {
+			senderAddr, ok := peerAddress[fileName]
+			var sendString string
+			if ok == true {
+				sendString = "SUCCESS," + senderAddr  	
+			} else {
+				sendString = "NOTFOUND"
+			}
+			
+			fmt.Println("Sending", sendString, "to", peerAddr)
+			conn.WriteTo([]byte(sendString), peerAddr)
+
+			if ok == true {
+				publicAddr2,_ := net.ResolveUDPAddr("udp", senderAddr) 
+				sendString = "REQUEST," + peerAddr.String() + "," + fileName
+				conn.WriteTo([]byte(sendString), publicAddr2)
+			}
+		}
+	}	
 }
