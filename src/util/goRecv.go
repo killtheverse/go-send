@@ -11,18 +11,19 @@ import (
 
 
 //GoRecv - this function is exported to the main module
-func GoRecv(fileName string, serverAddr string, port string) {
+func GoRecv(fileName string, serverAddr string, port string, tcpport string) {
 	fmt.Println("File name is:", fileName)
-	listenAddrString, err := ExternalIP()
+	listenAddrOnly, err := ExternalIP()
 	if err != nil {
 		panic(err)
 	}
-	listenAddrString = listenAddrString + port
+	listenAddrString := listenAddrOnly + port
+	tcpAddrString := listenAddrOnly + tcpport
 
-	registerRecv(fileName, listenAddrString, serverAddr)
+	registerRecv(fileName, listenAddrString, serverAddr, tcpAddrString)
 }
 
-func registerRecv(fileName string, listenAddrString string, serverAddrString string) {
+func registerRecv(fileName string, listenAddrString string, serverAddrString string, tcpAddrString string) {
 	fmt.Println("Dialing:", serverAddrString)
 	listenAddr, _ := net.ResolveUDPAddr("udp", listenAddrString)
 	serverAddr, _ := net.ResolveUDPAddr("udp", serverAddrString)
@@ -41,61 +42,83 @@ func registerRecv(fileName string, listenAddrString string, serverAddrString str
 		fmt.Println(bytesWritten, "bytes sent")
 	} ()
 	
-	handleConnectionRecv(conn)
+	handleConnectionRecv(conn, tcpAddrString)
 }
 
-func handleConnectionRecv(conn *net.UDPConn) {
+func handleConnectionRecv(conn *net.UDPConn, tcpAddrString string) {
 	peerAddrString := ""
 	for {
 		fmt.Println("Listening")
-		buffer := make([]byte, 1024)
+		buffer := make([]byte, 4*1024)
 		bytesRead, err := conn.Read(buffer)
 		if err != nil {
 			panic(err)
 		}
+		fmt.Println("buffer:", string(buffer[0:bytesRead]))
 		reply := strings.Split(string(buffer[0:bytesRead]), ",")[0]
-		
+		fmt.Println("Reply:", reply)
 		if reply == "NOTFOUND" {
 			fmt.Println("Requested file not found")
 		} else if reply == "SUCCESS" {
 			peerAddrString = strings.Split(string(buffer[0:bytesRead]), ",")[1]
 			peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)
+			fmt.Println("PUNCHING HOLE")
 			for i:=0;i<1;i++ {
 				conn.WriteTo([]byte("HOLEPUNCH"), peerAddr)
 			}	
 			fmt.Println("File found on address:", peerAddrString)
-		} else if reply == "SENDING" {
+		} else if reply == "TCPADDRESS" {
+			peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)
+			fmt.Println("Sending:",":"+strings.Split(tcpAddrString, ":")[1])
+			conn.WriteTo([]byte(":"+strings.Split(tcpAddrString, ":")[1]), peerAddr)
+
 			name := strings.Split(string(buffer[0:bytesRead]), ",")[1]
 			ext := strings.Split(string(buffer[0:bytesRead]), ",")[2]
 			name = name+"(copy)"
 			fileName := name + "." + ext
 			fmt.Println("Filename:", fileName)
+
+			ln, _ := net.Listen("tcp", tcpAddrString)
+			for {
+				fmt.Println("Listening TCP on", tcpAddrString)
+				tcpConn, _ := ln.Accept()
+				recieveFile(fileName, tcpConn)
+				fmt.Println("File recieved")
+				os.Exit(0)
+			}
+		} else if reply == "SENDING" {
+			
 			peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)
 			conn.WriteTo([]byte("OK"), peerAddr)
-			for {
-				bytesRead, err := conn.Read(buffer)
-				if err != nil {
-					panic(err)
-				}
-				data := string(buffer[:bytesRead])
-				fmt.Println("data:", data)
-				if data == "EXIT" {
-					break
-
-				} else {
-					fmt.Println("Writing", data)
-					err := ioutil.WriteFile(fileName, buffer[:bytesRead], 0777)
-					if err != nil {
-						fmt.Println(err)
-					}
-				}
-			}
-
-			fmt.Println("File recieved")
-			os.Exit(0)
+			
+			
 		}
 	}
 }
+
+func recieveFile(fileName string, conn net.Conn) {
+	
+	buffer := make([]byte, 4*1024)
+	for {
+		bytesRead, err := conn.Read(buffer)
+		if err != nil {
+			break
+		}
+		data := string(buffer[:bytesRead])
+		
+		if data == "EXIT" {
+			break
+		} else {
+			f, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY, 0600)
+			if err != nil {
+				ioutil.WriteFile(fileName, buffer[:bytesRead], 0777)
+			}
+			defer f.Close()
+
+			f.Write(buffer[:bytesRead])
+		}
+	}
+} 
 
 // ExternalIP is exported for use in goSend.go
 func ExternalIP() (string, error) {

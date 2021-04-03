@@ -91,8 +91,11 @@ func sendFile(fileName string, peerAddrstring string, conn *net.UDPConn) {
 
 	buffer := make([]byte, 1024)
 	reply := ""
+	
 	for {
-		conn.WriteTo([]byte("SENDING,"+name+","+ext), peerAddr)
+		sendString := "SENDING,"+name+","+ext
+		fmt.Println("sending:", sendString)
+		conn.WriteTo([]byte(sendString), peerAddr)
 		bytesRead, err := conn.Read(buffer)
 		if err != nil {
 			panic(err)
@@ -104,10 +107,28 @@ func sendFile(fileName string, peerAddrstring string, conn *net.UDPConn) {
 		}
 	}
 	
+
 	if reply == "OK" {
-		readFile(fileName, conn, peerAddrstring)
+		fmt.Println("Sending:TCPADDRESS")
+		conn.WriteTo([]byte("TCPADDRESS,"+name+","+ext), peerAddr)
+		bytesRead := 0
+		for {
+			bytesRead, _ = conn.Read(buffer)
+			fmt.Println(string(buffer[0:bytesRead]))
+			if string(buffer[0:bytesRead])!="OK" {
+				break
+			}
+		}
+
+		tcpAddrString := strings.Split(peerAddrstring, ":")[0] + string(buffer[0:bytesRead])
+		fmt.Println("Tcpaddress:", tcpAddrString)
+		tcpConn, err := net.Dial("tcp", tcpAddrString)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(2)
+		}
+		readFile(fileName, tcpConn, peerAddrstring)
 		fmt.Println("File sent")
-		conn.WriteTo([]byte("EXIT"), peerAddr)
 		os.Exit(0)
 	} else {
 		fmt.Println("Can't establish connection")
@@ -115,8 +136,8 @@ func sendFile(fileName string, peerAddrstring string, conn *net.UDPConn) {
 }
 
 
-func readFile(fileName string, conn *net.UDPConn, peerAddrString string) {
-	peerAddr, _ := net.ResolveUDPAddr("udp", peerAddrString)
+func readFile(fileName string, conn net.Conn, peerAddrString string) {
+	
 	f, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println("Can't read the file", err)
@@ -125,8 +146,9 @@ func readFile(fileName string, conn *net.UDPConn, peerAddrString string) {
 	defer f.Close()
 	
 	r := bufio.NewReader(f)
+	
 	for {
-		buf := make([]byte,4*1024) 
+		buf := make([]byte, 4*1024) 
 		n, err := r.Read(buf) 
 		buf = buf[:n]
 		
@@ -140,8 +162,16 @@ func readFile(fileName string, conn *net.UDPConn, peerAddrString string) {
 			}
 			break
 		}
-		fmt.Println("SENDING:", string(buf))
-		fmt.Println("=====================")
-		conn.WriteTo(buf, peerAddr)
+		
+		// fmt.Println("SENDING:", string(buf))
+		// fmt.Println("=====================")
+		
+		
+		_, err = conn.Write(buf)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
+	conn.Write([]byte("EXIT"))
 }

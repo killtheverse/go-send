@@ -29,6 +29,11 @@ func main() {
 			Value: ":9000",
 			Usage: "Port no.",
 		},
+		&cli.StringFlag{
+			Name: "tcpport",
+			Value: ":9001",
+			Usage: "Tcp port no.",
+		},
 	}
 
 	app.Commands = []*cli.Command {
@@ -44,7 +49,7 @@ func main() {
 			Name: "recieve",
 			Usage: "recieves the file",
 			Action: func(c *cli.Context) error {
-				util.GoRecv(c.String("file"), c.String("server"), c.String("port"))
+				util.GoRecv(c.String("file"), c.String("server"), c.String("port"), c.String("tcpport"))
 				return nil
 			},
 		},
