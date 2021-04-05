@@ -5,7 +5,9 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
-	"github.com/killtheverse/go-send/src/util"
+
+	"github.com/killtheverse/go-send/src/goSend"
+	"github.com/killtheverse/go-send/src/goRecv"
 )
 
 func main() {
@@ -41,7 +43,7 @@ func main() {
 			Name: "send",
 			Usage: "sends a file",
 			Action: func(c *cli.Context) error {
-				util.GoSend(c.String("file"), c.String("server"), c.String("port"))
+				goSend.GoSend(c.String("file"), c.String("server"), c.String("port"))
 				return nil
 			},
 		},	
@@ -49,7 +51,7 @@ func main() {
 			Name: "recieve",
 			Usage: "recieves the file",
 			Action: func(c *cli.Context) error {
-				util.GoRecv(c.String("file"), c.String("server"), c.String("port"), c.String("tcpport"))
+				goRecv.GoRecv(c.String("file"), c.String("server"), c.String("port"), c.String("tcpport"))
 				return nil
 			},
 		},
@@ -60,4 +62,3 @@ func main() {
 		log.Fatal(err)
 	}
 }
-

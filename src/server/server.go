@@ -3,15 +3,16 @@ package main
 import (
 	"fmt"
 	"net"
-	"strings"
-	"github.com/killtheverse/go-send/src/util"
+	"encoding/json"
+
+	"github.com/killtheverse/go-send/src/utils"
 )	
 
 type m map[string]string
 var peerAddress = m{}
 
 func main() {
-	listenAddrString, err := util.ExternalIP()
+	listenAddrString, err := utils.ExternalIP()
 	if err != nil {
 		panic(err)
 	}
@@ -34,38 +35,44 @@ func handleConnection(conn *net.UDPConn) {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("Buffer:", string(buffer[0:bytesRead]))
-		if string(buffer[0:bytesRead]) == "KEEPALIVE" {
-			continue
+		
+		recvData := make(map[string]string)
+		err = json.Unmarshal(buffer[0:bytesRead], &recvData)
+		if err != nil {
+			fmt.Println(err)
+			panic(err)
 		}
-		message := strings.Split(string(buffer[0:bytesRead]), ",")[0]
-		fileName := strings.Split(string(buffer[0:bytesRead]), ",")[1]
+		fmt.Printf("%+v\n", recvData)
+		
+		instruction := recvData["INSTRUCTION"]
+		fmt.Println("instruction: ", instruction)
 
-		fmt.Println("Message:", message)
-		fmt.Println("Filename:", fileName)
-		fmt.Println("peerAddr:", peerAddr.String())
-
-		if message == "REGISTER" {
+		if instruction == "KEEPALIVE" {
+			continue
+		} else if instruction == "REGISTER" {
+			fileName := recvData["FILENAME"]
 			peerAddress[fileName] = peerAddr.String()
 			fmt.Println("Sending", "SUCCESS", "to local:", peerAddr.String())
-			conn.WriteTo([]byte("SUCCESS"), peerAddr)
-		} else if message == "CHECK" {
+			sendData := make(map[string]string)
+			sendData["INSTRUCTION"] = "SUCCESS"
+			utils.SendData(peerAddr.String(), conn, sendData)
+		} else if instruction == "CHECK" {
+			fileName := recvData["FILENAME"]
 			senderAddr, ok := peerAddress[fileName]
-			var sendString string
+			sendData := make(map[string]string)
 			if ok == true {
-				sendString = "SUCCESS," + senderAddr  	
+				sendData["INSTRUCTION"] = "SUCCESS"
+				sendData["SENDER"] = senderAddr
+				
+				sendData2 := make(map[string]string)
+				sendData2["INSTRUCTION"] = "REQUEST"
+				sendData2["FILENAME"] = fileName
+				sendData2["RECIEVER"] = peerAddr.String()
+				utils.SendData(senderAddr, conn, sendData2)
 			} else {
-				sendString = "NOTFOUND"
+				sendData["INSTRUCTION"] = "NOTFOUND"
 			}
-			
-			fmt.Println("Sending", sendString, "to", peerAddr)
-			conn.WriteTo([]byte(sendString), peerAddr)
-
-			if ok == true {
-				publicAddr2,_ := net.ResolveUDPAddr("udp", senderAddr) 
-				sendString = "REQUEST," + peerAddr.String() + "," + fileName
-				conn.WriteTo([]byte(sendString), publicAddr2)
-			}
-		}
+			utils.SendData(peerAddr.String(), conn, sendData)
+		}	
 	}	
 }
